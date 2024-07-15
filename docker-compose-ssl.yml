@@ -28,7 +28,7 @@ services:
     - postgresql
     ports:
     - "${GITLAB_PORT_HTTP}:80"
-    - "${GITLAB_PORT_SSH}:22"
+    - "${GITLAB_SSH_PORT}:22"
     - "${GITLAB_PORT_HTTPS}:443"
     volumes:
     - ${DATA_STORE_PATH}:/home/git/data:Z
@@ -59,7 +59,7 @@ services:
 
     - GITLAB_HOST=localhost
     - GITLAB_PORT=${GITLAB_PORT}
-    - GITLAB_SSH_PORT=10022
+    - GITLAB_SSH_PORT=${GITLAB_SSH_PORT}
     - GITLAB_RELATIVE_URL_ROOT=
     - GITLAB_SECRETS_DB_KEY_BASE=long-and-random-alphanumeric-string
     - GITLAB_SECRETS_SECRET_KEY_BASE=long-and-random-alphanumeric-string
