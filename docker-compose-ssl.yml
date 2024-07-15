@@ -27,9 +27,9 @@ services:
     - redis
     - postgresql
     ports:
-    - "${GITLAB_PORT_HTTP}:8888"
+    - "${GITLAB_PORT_HTTP}:80"
     - "${GITLAB_PORT_SSH}:22"
-    - "${GITLAB_PORT_HTTPS}:4444"
+    - "${GITLAB_PORT_HTTPS}:443"
     volumes:
     - ${DATA_STORE_PATH}:/home/git/data:Z
     healthcheck:
