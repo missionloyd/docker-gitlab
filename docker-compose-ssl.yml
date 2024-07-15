@@ -112,6 +112,8 @@ services:
     - OAUTH_GITHUB_URL=${OAUTH_GITHUB_URL}
     - OAUTH_GITHUB_VERIFY_SSL=${OAUTH_GITHUB_VERIFY_SSL}
 
+    - NGINX_X_FORWARDED_PROTO=${NGINX_X_FORWARDED_PROTO}
+
 volumes:
   redis-data:
   postgresql-data:
