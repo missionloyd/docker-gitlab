@@ -52,7 +52,7 @@ services:
     - REDIS_PORT=6379
 
     - TZ=America/Denver
-    - GITLAB_TIMEZONE=Denver
+    - GITLAB_TIMEZONE=America/Denver
 
     - GITLAB_HTTPS=${GITLAB_HTTPS}
     - SSL_SELF_SIGNED=${SSL_SELF_SIGNED}
