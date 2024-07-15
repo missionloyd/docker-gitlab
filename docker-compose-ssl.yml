@@ -32,6 +32,9 @@ services:
     - "${GITLAB_PORT_HTTPS}:443"
     volumes:
     - ${DATA_STORE_PATH}:/home/git/data:Z
+    - /var/lib/gitlab/data/:/home/git/data
+    - /home/git/.ssh/authorized_keys_proxy:/home/git/data/.ssh/authorized_keys_proxy
+    - /home/git/.ssh/authorized_keys_proxy:/gitlab-data/ssh/authorized_keys
     healthcheck:
       test: ["CMD", "/usr/local/sbin/healthcheck"]
       interval: 5m
@@ -111,8 +114,6 @@ services:
     - OAUTH_GITHUB_APP_SECRET=${OAUTH_GITHUB_APP_SECRET}
     - OAUTH_GITHUB_URL=${OAUTH_GITHUB_URL}
     - OAUTH_GITHUB_VERIFY_SSL=${OAUTH_GITHUB_VERIFY_SSL}
-
-    - NGINX_X_FORWARDED_PROTO=${NGINX_X_FORWARDED_PROTO}
 
 volumes:
   redis-data:
