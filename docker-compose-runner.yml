@@ -1,0 +1,211 @@
+version: '3'
+
+networks:
+  proxy:
+    # external: true
+  internal:
+    external: false
+
+services:
+
+  # user: myuser
+  # mdp:  9EwzxWGzqvY4aSH3
+  traefik:
+    image: traefik:alpine
+    container_name: traefik
+    networks:
+      - proxy
+    ports:
+      - "80:80"
+      - "8080:8080"
+      - "443:443"
+    volumes:
+      - /data/traefik/traefik.toml:/etc/traefik/traefik.toml
+      - /data/traefik/acme:/etc/traefik/acme
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    labels:
+      - traefik.frontend.rule=Host:traefik.power-theory.io
+      - traefik.port=8080
+      - traefik.backend=traefik
+      - traefik.frontend.entryPoints=http,https
+
+  # Watch acme.json and dump certificates to files
+  certdumper:
+    container_name: traefik_certdumper
+    image: alpine:latest
+    depends_on:
+      - traefik
+    restart: unless-stopped
+    volumes:
+      - /data/traefik:/traefik
+    command: >
+      ash -c " \
+        apk --no-cache add inotify-tools jq openssl util-linux bash && \
+        wget https://raw.githubusercontent.com/containous/traefik/master/contrib/scripts/dumpcerts.sh -O dumpcerts.sh && \
+        mkdir -p /traefik/ssl/ && \
+        while true; do \
+          inotifywait -e modify /traefik/acme/acme.json && \
+            bash dumpcerts.sh /traefik/acme/acme.json /traefik/ssl/ && \
+            rm -f /traefik/ssl/*.crt && ln -f /traefik/ssl/certs/* /traefik/ssl/ && \
+            rm -f /traefik/ssl/*.key && ln -f /traefik/ssl/private/* /traefik/ssl/ && \
+            chmod 644 -R /traefik/ssl;
+        done"
+
+  # user: devteam
+  # mdp:  9EwzxWGzqvY4aSH3
+  portainer:
+    image: portainer/portainer:latest
+    container_name: portainer
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.frontend.rule=Host:portainer.power-theory.io
+      - traefik.port=9000
+      - traefik.backend=portainer
+      - traefik.frontend.entryPoints=http,https
+    volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - portainer-data:/data
+    restart: unless-stopped
+
+  registry:
+    image: registry:2
+    container_name: gitlab-registry
+    restart: always
+    networks:
+      - proxy
+      - internal
+    depends_on:
+      - traefik
+    expose:
+        - "5000"
+    ports:
+        - "5000:5000"
+    volumes:
+        - /data/gitlab/registry:/registry
+        - /data/traefik/ssl:/certs
+    labels:
+      - traefik.enable=true
+      - traefik.port=5000
+      - traefik.frontend.rule=Host:registry.power-theory.io
+      - traefik.docker.network=proxy
+      # - traefik.frontend.auth.basic=myuser:fd9ef338f7de0f196c5409a668102b9a
+    environment:
+      - REGISTRY_LOG_LEVEL=error
+      - REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/registry
+      - REGISTRY_AUTH_TOKEN_REALM=https://gitlab.power-theory.io/jwt/auth
+      - REGISTRY_AUTH_TOKEN_SERVICE=container_registry
+      - REGISTRY_AUTH_TOKEN_ISSUER=gitlab-issuer
+      - REGISTRY_AUTH_TOKEN_ROOTCERTBUNDLE=/certs/registry.power-theory.io.crt
+      - REGISTRY_STORAGE_DELETE_ENABLED=true
+
+  gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
+    container_name: gitlab-runner
+    networks:
+      - proxy
+      - internal
+    restart: always
+    depends_on:
+      - gitlab
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /data/gitlab-runner:/etc/gitlab-runner:Z
+    environment:
+      - CI_SERVER_URL=https://gitlab.power-theory.io/
+      - REGISTRATION_TOKEN=FzZtgyN1cAMzoYne89ts
+
+  gitlab:
+    restart: always
+    image: gitlab/gitlab-ce:11.5.3-ce.0
+    container_name: gitlab-ce
+    hostname: gitlab.power-theory.io
+    networks:
+      - proxy
+      - internal
+    healthcheck:
+      disable: true
+    depends_on:
+      - traefik
+      - registry
+    ports:
+      - "2222:22"
+    volumes:
+      - /data/gitlab/gitlab-config:/etc/gitlab
+      - /data/gitlab/gitlab-logs:/var/log/gitlab
+      - /data/gitlab/gitlab-data:/var/opt/gitlab
+      - /data/traefik/ssl:/certs
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        # External URL as it will be seen by GitLab users, so with HTTPS, even if GitLab itself only serves HTTP
+        external_url 'https://gitlab.power-theory.io'
+
+        # Disable HTTPS and serve plain HTTP. The rest will be handled by Traefik
+        nginx['listen_port'] = 80
+        nginx['listen_https'] = false
+
+        # I had some issues and therefore disabled HTTP/2, but should normally work
+        nginx['http2_enabled'] = false
+
+        # Pass headers to GitLab, $$ escapes 
+        nginx['proxy_set_headers'] = {
+          "Host" => "$$http_host",
+          "X-Real-IP" => "$$remote_addr",
+          "X-Forwarded-For" => "$$proxy_add_x_forwarded_for",
+          "X-Forwarded-Proto" => "https",
+          "X-Forwarded-Ssl" => "on"
+        }
+
+        # Define SSH port for git+ssh, can also be changed as you like
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+
+        # External URL for the registry as seen by GitLab users with HTTPS even if Gitlab itself only serves HTTP
+        registry_external_url 'https://registry.power-theory.io'
+
+        gitlab_rails['registry_enabled'] = true
+        gitlab_rails['registry_key_path'] = '/certs/registry.power-theory.io.key'
+        gitlab_rails['registry_api_url'] = 'http://gitlab-registry:5000'
+        gitlab_rails['registry_issuer'] = 'gitlab-issuer'
+
+
+        registry_nginx['ssl_certificate'] = "/certs/registry.power-theory.io.crt"
+        registry_nginx['ssl_certificate_key'] = "/certs/registry.power-theory.io.key"
+
+        # External URL for Pages hosting as seen by GitLab users with HTTPS even if Gitlab itself only serves HTTP
+        pages_external_url 'https://pages.gitlab.power-theory.io'
+
+        # Disable HTTPS and set custom port for the service
+        pages_nginx['listen_port'] = 5200
+        pages_nginx['listen_https'] = false
+
+        # Pass headers
+        pages_nginx['proxy_set_headers'] = {
+          "Host" => "$$http_host",
+          "X-Real-IP" => "$$remote_addr",
+          "X-Forwarded-For" => "$$proxy_add_x_forwarded_for",
+          "X-Forwarded-Proto" => "https",
+          "X-Forwarded-Ssl" => "on"
+        }
+
+        # Seems like when you use Docker data volumes, you need this, otherwise it shows this in the log:
+        # "Failed to bind mount /gitlab-data/shared/pages on /tmp/gitlab-pages-xyz/pages. operation not permitted"
+        gitlab_pages['inplace_chroot'] = true
+        
+        # Tell GitLab to use an external HTTP server, like Traefik in our case, to handle custom domains.
+        # The documentation says that you'd need to point an additional IP address here that you want to use but I 
+        # figured out that just using the GitLab container name works as well, so no need to purchase an additional
+        # domain :-)
+        gitlab_pages['external_http'] = ['gitlab:5201']
+    labels:
+      - traefik.enable=true
+      - traefik.frontend.rule=Host:gitlab.power-theory.io
+      - traefik.docker.network=proxy
+      - traefik.port=80
+      - traefik.backend=gitlab
+      - traefik.frontend.entryPoints=http,https
+
+volumes:
+  portainer-data:
+    driver: local
