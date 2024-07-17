@@ -46,7 +46,7 @@ server {
   ## the ip address of the server (http://x.x.x.x/)
   listen 0.0.0.0:80;
   listen [::]:80 ipv6only=on default_server;
-  server_name ~^(?<branch>.+)\.(?<project>.+)\.power-theory\.io$;
+  server_name gitlab.power-theory.io; ## Replace this with something like gitlab.example.com
   server_tokens off; ## Don't show the nginx version number, a security best practice
   return 301 https://$host:{{GITLAB_PORT}}$request_uri;
   access_log  {{GITLAB_LOG_DIR}}/nginx/gitlab_access.log main;
@@ -57,7 +57,7 @@ server {
 server {
   listen 0.0.0.0:443 ssl http2;
   listen [::]:443 ipv6only=on ssl http2 default_server;
-  server_name ~^(?<branch>.+)\.(?<project>.+)\.power-theory\.io$;
+  server_name {{GITLAB_HOST}}; ## Replace this with something like gitlab.example.com
   server_tokens off; ## Don't show the nginx version number, a security best practice
 
   ## Strong SSL Security
@@ -127,51 +127,7 @@ server {
     proxy_set_header    Upgrade             $http_upgrade;
     proxy_set_header    Connection          $connection_upgrade_gitlab_ssl;
 
-    # Map branch and project subdomains to appropriate backend service
-    set $backend "";
-    if ($project = gitlab) {
-      proxy_pass http://gitlab-workhorse;
-      break;
-    }
-
-    # Example: Routing logic based on branch and project
-    if ($project = powertwin) {
-      if ($branch = dev) {
-        set $backend "localhost:9443";
-      }
-      if ($branch = prev) {
-        set $backend "localhost:9444";
-      }
-      if ($branch = main) {
-        set $backend "localhost:9445";
-      }
-    }
-
-    if ($project = powertwin-db) {
-      if ($branch = dev) {
-        set $backend "localhost:5443";
-      }
-      if ($branch = prev) {
-        set $backend "localhost:5444";
-      }
-      if ($branch = main) {
-        set $backend "localhost:5445";
-      }
-    }
-
-    if ($project = powertwin-solver) {
-      if ($branch = dev) {
-        set $backend "localhost:7443";
-      }
-      if ($branch = prev) {
-        set $backend "localhost:7444";
-      }
-      if ($branch = main) {
-        set $backend "localhost:7445";
-      }
-    }
-
-    proxy_pass http://$backend;
+    proxy_pass http://gitlab-workhorse;
   }
 
   error_page 404 /404.html;
