@@ -46,7 +46,7 @@ server {
   ## the ip address of the server (http://x.x.x.x/)
   listen 0.0.0.0:80;
   listen [::]:80 ipv6only=on default_server;
-  server_name ~^(?<branch>.+)\.(?<project>.+)\.power-theory\.io$;
+  server_name ~^(?<branch>.+)~(?<project>.+)\.power-theory\.io$|^gitlab\.power-theory\.io$;  
   server_tokens off; ## Don't show the nginx version number, a security best practice
   return 301 https://$host:{{GITLAB_PORT}}$request_uri;
   access_log  {{GITLAB_LOG_DIR}}/nginx/gitlab_access.log main;
@@ -57,7 +57,7 @@ server {
 server {
   listen 0.0.0.0:443 ssl http2;
   listen [::]:443 ipv6only=on ssl http2 default_server;
-  server_name ~^(?<branch>.+)\.(?<project>.+)\.power-theory\.io$;
+  server_name ~^(?<branch>.+)~(?<project>.+)\.power-theory\.io$|^gitlab\.power-theory\.io$;  
   server_tokens off; ## Don't show the nginx version number, a security best practice
 
   ## Strong SSL Security
@@ -129,7 +129,7 @@ server {
 
     # Map branch and project subdomains to appropriate backend service
     set $backend "";
-    if ($project = gitlab) {
+    if ($host = "gitlab.power-theory.io") {
       proxy_pass http://gitlab-workhorse;
       break;
     }
