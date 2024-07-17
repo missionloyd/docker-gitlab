@@ -20,6 +20,19 @@ services:
     - DB_NAME=gitlabhq_production
     - DB_EXTENSION=pg_trgm,btree_gist
 
+  gitlab-runner:
+    image: gitlab/gitlab-runner:alpine
+    container_name: gitlab-runner
+    restart: always
+    depends_on:
+      - gitlab
+    volumes:
+      - /srv/gitlab-runner:/etc/gitlab-runner:Z
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CI_SERVER_URL=${CI_SERVER_URL}
+      - REGISTRATION_TOKEN=${REGISTRATION_TOKEN}
+
   gitlab:
     restart: always
     image: sameersbn/gitlab:17.1.2
@@ -117,4 +130,5 @@ services:
 volumes:
   redis-data:
   postgresql-data:
+  gitlab-runner-data:
   gitlab-data:
