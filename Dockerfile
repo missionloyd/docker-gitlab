@@ -1,15 +1,15 @@
-FROM ubuntu:focal-20240530
+FROM ubuntu:focal-20240918
 
-ARG VERSION=17.4.1
+ARG VERSION=17.4.2
 
 ENV GITLAB_VERSION=${VERSION} \
     RUBY_VERSION=3.2.5 \
     RUBY_SOURCE_SHA256SUM="ef0610b498f60fb5cfd77b51adb3c10f4ca8ed9a17cb87c61e5bea314ac34a16" \
     RUBYGEMS_VERSION=3.5.14 \
-    GOLANG_VERSION=1.23.1 \
+    GOLANG_VERSION=1.23.2 \
     GITLAB_SHELL_VERSION=14.39.0 \
-    GITLAB_PAGES_VERSION=17.4.1 \
-    GITALY_SERVER_VERSION=17.4.1 \
+    GITLAB_PAGES_VERSION=17.4.2 \
+    GITALY_SERVER_VERSION=17.4.2 \
     GITLAB_USER="git" \
     GITLAB_HOME="/home/git" \
     GITLAB_LOG_DIR="/var/log/gitlab" \
@@ -46,7 +46,7 @@ RUN set -ex && \
  && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
       sudo supervisor logrotate locales curl \
       nginx openssh-server postgresql-contrib redis-tools \
-      postgresql-client-13 postgresql-client-14 postgresql-client-15 \
+      postgresql-client-13 postgresql-client-14 postgresql-client-15 postgresql-client-16 \
       python3 python3-docutils nodejs yarn gettext-base graphicsmagick \
       libpq5 zlib1g libyaml-0-2 libssl1.1 \
       libgdbm6 libreadline8 libncurses5 libffi7 \
