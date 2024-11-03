@@ -1,6 +1,6 @@
-FROM ubuntu:focal-20240918
+FROM ubuntu:focal-20241011
 
-ARG VERSION=17.4.2
+ARG VERSION=17.5.1
 
 ENV GITLAB_VERSION=${VERSION} \
     RUBY_VERSION=3.2.5 \
@@ -8,8 +8,8 @@ ENV GITLAB_VERSION=${VERSION} \
     RUBYGEMS_VERSION=3.5.14 \
     GOLANG_VERSION=1.23.2 \
     GITLAB_SHELL_VERSION=14.39.0 \
-    GITLAB_PAGES_VERSION=17.4.2 \
-    GITALY_SERVER_VERSION=17.4.2 \
+    GITLAB_PAGES_VERSION=17.5.1 \
+    GITALY_SERVER_VERSION=17.5.1 \
     GITLAB_USER="git" \
     GITLAB_HOME="/home/git" \
     GITLAB_LOG_DIR="/var/log/gitlab" \
@@ -81,6 +81,8 @@ LABEL \
     com.damagehead.gitlab.license=MIT
 
 EXPOSE 22/tcp 80/tcp 443/tcp
+
+RUN ln -s /etc/ssl/certs/ca-certificates.crt /usr/lib/ssl/cert.pem
 
 VOLUME ["${GITLAB_DATA_DIR}", "${GITLAB_LOG_DIR}","${GITLAB_HOME}/gitlab/node_modules"]
 WORKDIR ${GITLAB_INSTALL_DIR}
