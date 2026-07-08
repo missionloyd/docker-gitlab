@@ -1,0 +1,119 @@
+version: '2.3'
+
+services:
+  redis:
+    restart: always
+    image: redis:7
+    command:
+    - --loglevel warning
+    volumes:
+    - redis-data:/data:Z
+
+  postgresql:
+    restart: always
+    image: kkimurak/sameersbn-postgresql:16
+    volumes:
+    - postgresql-data:/var/lib/postgresql:Z
+    environment:
+    - DB_USER=gitlab
+    - DB_PASS=password
+    - DB_NAME=gitlabhq_production
+    - DB_EXTENSION=pg_trgm,btree_gist
+
+  gitlab:
+    restart: always
+    image: sameersbn/gitlab:18.6.2
+    depends_on:
+    - redis
+    - postgresql
+    ports:
+    - "${GITLAB_PORT_HTTP}:80"
+    - "${GITLAB_SSH_PORT}:22"
+    - "${GITLAB_PORT_HTTPS}:443"
+    volumes:
+    - ${DATA_STORE_PATH}:/home/git/data:Z
+    healthcheck:
+      test: ["CMD", "/usr/local/sbin/healthcheck"]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 5m
+    environment:
+    - DEBUG=false
+
+    - DB_ADAPTER=postgresql
+    - DB_HOST=postgresql
+    - DB_PORT=5432
+    - DB_USER=gitlab
+    - DB_PASS=password
+    - DB_NAME=gitlabhq_production
+
+    - REDIS_HOST=redis
+    - REDIS_PORT=6379
+
+    - TZ=America/Denver
+    - GITLAB_TIMEZONE=America/Denver
+
+    - GITLAB_HTTPS=${GITLAB_HTTPS}
+    - SSL_SELF_SIGNED=${SSL_SELF_SIGNED}
+
+    - GITLAB_HOST=${GITLAB_HOST}
+    - GITLAB_PORT=8443
+    - GITLAB_SSH_PORT=${GITLAB_SSH_PORT}
+    - NGINX_X_FORWARDED_PROTO=https
+    - GITLAB_RELATIVE_URL_ROOT=
+    - GITLAB_SECRETS_DB_KEY_BASE=long-and-random-alphanumeric-string
+    - GITLAB_SECRETS_SECRET_KEY_BASE=long-and-random-alphanumeric-string
+    - GITLAB_SECRETS_OTP_KEY_BASE=long-and-random-alphanumeric-string
+
+    - GITLAB_ROOT_PASSWORD=${GITLAB_ROOT_PASSWORD}
+    - GITLAB_ROOT_EMAIL=${GITLAB_ROOT_EMAIL}
+
+    - GITLAB_NOTIFY_ON_BROKEN_BUILDS=true
+    - GITLAB_NOTIFY_PUSHER=false
+
+    - GITLAB_EMAIL=notifications@example.com
+    - GITLAB_EMAIL_REPLY_TO=noreply@example.com
+    - GITLAB_INCOMING_EMAIL_ADDRESS=reply@example.com
+
+    - GITLAB_BACKUP_SCHEDULE=daily
+    - GITLAB_BACKUP_TIME=01:00
+
+    - SMTP_ENABLED=false
+    - SMTP_DOMAIN=www.example.com
+    - SMTP_HOST=smtp.gmail.com
+    - SMTP_PORT=587
+    - SMTP_USER=mailer@example.com
+    - SMTP_PASS=password
+    - SMTP_STARTTLS=true
+    - SMTP_AUTHENTICATION=login
+
+    - IMAP_ENABLED=false
+    - IMAP_HOST=imap.gmail.com
+    - IMAP_PORT=993
+    - IMAP_USER=mailer@example.com
+    - IMAP_PASS=password
+    - IMAP_SSL=true
+    - IMAP_STARTTLS=false
+
+    - OAUTH_ENABLED=false
+    - OAUTH_AUTO_SIGN_IN_WITH_PROVIDER=google_oauth2,github
+    - OAUTH_ALLOW_SSO=${OAUTH_ALLOW_SSO}
+    - OAUTH_BLOCK_AUTO_CREATED_USERS=true
+    - OAUTH_AUTO_LINK_LDAP_USER=false
+    - OAUTH_AUTO_LINK_SAML_USER=false
+    - OAUTH_EXTERNAL_PROVIDERS=google_oauth2,github
+
+    - OAUTH_GOOGLE_API_KEY=${OAUTH_GOOGLE_API_KEY}
+    - OAUTH_GOOGLE_APP_SECRET=${OAUTH_GOOGLE_APP_SECRET}
+    - OAUTH_GOOGLE_RESTRICT_DOMAIN=${OAUTH_GOOGLE_RESTRICT_DOMAIN}
+
+    - OAUTH_GITHUB_API_KEY=${OAUTH_GITHUB_API_KEY}
+    - OAUTH_GITHUB_APP_SECRET=${OAUTH_GITHUB_APP_SECRET}
+    - OAUTH_GITHUB_URL=${OAUTH_GITHUB_URL}
+    - OAUTH_GITHUB_VERIFY_SSL=${OAUTH_GITHUB_VERIFY_SSL}
+
+volumes:
+  redis-data:
+  postgresql-data:
+  gitlab-data:
