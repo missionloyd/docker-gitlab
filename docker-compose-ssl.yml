@@ -33,7 +33,8 @@ services:
     volumes:
     - ${DATA_STORE_PATH}:/home/git/data:Z
     healthcheck:
-      test: ["CMD", "/usr/local/sbin/healthcheck"]
+      # The image's script probes http://127.0.0.1, which nginx 301s to https when GITLAB_HTTPS=true.
+      test: ["CMD", "curl", "-fsk", "-o", "/dev/null", "https://127.0.0.1/-/liveness"]
       interval: 5m
       timeout: 10s
       retries: 3
