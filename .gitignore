@@ -1,3 +1,7 @@
 *.gem
 *.tar.gz
 *.tar.bz2
+# local secrets and DNS zone exports
+.env
+.env.local
+power-theory.io*.txt
