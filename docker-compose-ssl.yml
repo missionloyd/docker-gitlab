@@ -32,6 +32,8 @@ services:
     - "${GITLAB_PORT_HTTPS}:443"
     volumes:
     - ${DATA_STORE_PATH}:/home/git/data:Z
+    extra_hosts:
+    - "exodus.tail17ed95.ts.net:100.96.59.118"
     healthcheck:
       # The image's script probes http://127.0.0.1, which nginx 301s to https when GITLAB_HTTPS=true.
       test: ["CMD", "curl", "-fsk", "-o", "/dev/null", "https://127.0.0.1/-/liveness"]
@@ -63,6 +65,17 @@ services:
     - GITLAB_SSH_PORT=${GITLAB_SSH_PORT}
     - NGINX_X_FORWARDED_PROTO=https
     - GITLAB_RELATIVE_URL_ROOT=
+
+    # Container registry (2026-10-20): GitLab issues the tokens and shows the images; the registry itself runs on
+    # exodus (~/services/registry, data on its DAS) behind tailscale serve at https://exodus.tail17ed95.ts.net:5443.
+    # SSL_REGISTRY_CERT_PATH points nowhere on purpose, so this container sets up no nginx proxy for the registry.
+    - GITLAB_REGISTRY_ENABLED=true
+    - GITLAB_REGISTRY_HOST=exodus.tail17ed95.ts.net
+    - GITLAB_REGISTRY_PORT=5443
+    - GITLAB_REGISTRY_API_URL=https://exodus.tail17ed95.ts.net:5443
+    - GITLAB_REGISTRY_KEY_PATH=/home/git/data/certs/registry.key
+    - GITLAB_REGISTRY_ISSUER=gitlab-issuer
+    - SSL_REGISTRY_CERT_PATH=/home/git/data/certs/no-registry-proxy.crt
     - GITLAB_SECRETS_DB_KEY_BASE=long-and-random-alphanumeric-string
     - GITLAB_SECRETS_SECRET_KEY_BASE=long-and-random-alphanumeric-string
     - GITLAB_SECRETS_OTP_KEY_BASE=long-and-random-alphanumeric-string
